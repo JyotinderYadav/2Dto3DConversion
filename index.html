@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedVol — 2D to 3D Surgical Imaging Platform</title>
+  <meta name="description" content="Convert 2D medical images (X-ray, MRI, CT) into precise 3D volumetric reconstructions for surgical planning using AI-powered deep learning.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23030810'/><path d='M16 5L7 10.5v11L16 27l9-5.5v-11L16 5z' stroke='%2300e5ff' stroke-width='1.5' fill='%2300e5ff20'/><circle cx='16' cy='16' r='4' fill='%2300e5ff'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Background effects -->
+  <div class="bg-grid"></div>
+  <div class="scan-line" id="scanLine"></div>
+  <div class="corner-decoration tl"></div>
+  <div class="corner-decoration tr"></div>
+  <div class="corner-decoration bl"></div>
+  <div class="corner-decoration br"></div>
+
+  <!-- HEADER -->
+  <header id="mainHeader">
+    <div class="header-left">
+      <div class="logo-mark">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L3 6.5v7L10 18l7-4.5v-7L10 2z" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.08)"/>
+          <circle cx="10" cy="10" r="2.5" fill="#00e5ff" opacity="0.7"/>
+          <circle cx="10" cy="10" r="5" stroke="#00e5ff" stroke-width="0.5" stroke-dasharray="2 2" opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="logo-text">Med<span>Vol</span></div>
+      <div class="logo-tagline">SURGICAL IMAGING AI</div>
+    </div>
+    <nav class="header-nav">
+      <button class="nav-btn active" data-tab="workspace">Workspace</button>
+      <button class="nav-btn" data-tab="research">Research</button>
+      <button class="nav-btn" data-tab="methods">Methods</button>
+    </nav>
+    <div class="header-right">
+      <div class="system-status">
+        <div class="status-dot pulse-green"></div>
+        <span>SYSTEM ONLINE</span>
+      </div>
+      <div class="badge-pill">v2.4.1</div>
+      <div class="badge-pill accent">GPU READY</div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE TAB -->
+  <div class="tab-content active" id="tab-workspace">
+    <div class="workspace-grid">
+
+      <!-- ═══ LEFT PANEL ═══ -->
+      <aside class="panel panel-left" id="leftPanel">
+        <div class="panel-header">
+          <div class="ph-icon">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="1" y="1" width="10" height="10" rx="2" stroke="#00e5ff" stroke-width="1"/>
+              <path d="M4 6h4M6 4v4" stroke="#00e5ff" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span>INPUT SOURCE</span>
+          <div class="ph-dot"></div>
+        </div>
+
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="uploadZone" tabindex="0" role="button" aria-label="Upload medical image">
+          <input type="file" id="fileInput" accept="image/*,.dcm" aria-label="File input">
+          <div class="uz-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 5v14M8 11l6-6 6 6M5 19v2a2 2 0 002 2h14a2 2 0 002-2v-2"/>
+            </svg>
+          </div>
+          <div class="uz-text">
+            <h3>Drop medical image here</h3>
+            <p>X-ray · MRI slice · CT scan · Ultrasound</p>
+          </div>
+          <div class="uz-formats">
+            <span class="ftag">X-RAY</span>
+            <span class="ftag">MRI</span>
+            <span class="ftag">CT</span>
+            <span class="ftag">ECHO</span>
+            <span class="ftag">DICOM</span>
+          </div>
+          <div class="uz-hint">PNG · JPG · DICOM · BMP · TIFF</div>
+        </div>
+
+        <!-- Sample Image Button -->
+        <div class="sample-load-area" style="padding: 0 16px 8px; text-align: center;">
+          <button class="sample-btn" id="loadSampleBtn" aria-label="Load sample X-ray image">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="2" width="12" height="10" rx="1.5"/><polyline points="1,9 4,6 7,8 10,5 13,8"/><circle cx="4" cy="5" r="1" fill="currentColor"/></svg>
+            Try Sample X-ray
+          </button>
+        </div>
+
+        <!-- Preview -->
+        <div id="previewContainer" class="preview-container hidden">
+          <div class="preview-image-wrap">
+            <img id="previewImg" src="" alt="Uploaded medical image">
+            <div class="preview-badge">2D SOURCE</div>
+            <div class="preview-overlay"></div>
+            <button class="preview-remove" id="removeFile" aria-label="Remove file">✕</button>
+          </div>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">DIMENSIONS</div>
+              <div class="meta-value" id="metaDims">—</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">FILE SIZE</div>
+              <div class="meta-value" id="metaSize">—</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">MODALITY</div>
+              <div class="meta-value" id="metaModality">AUTO</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">BIT DEPTH</div>
+              <div class="meta-value" id="metaBitDepth">8-bit</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="settings-section">
+          <div class="section-label">
+            <span>RECONSTRUCTION METHOD</span>
+          </div>
+          <div class="method-list" id="methodList">
+            <button class="method-btn active" data-method="deep" id="methodDeep">
+              <div class="method-icon brain-icon">🧠</div>
+              <div class="method-info">
+                <div class="method-name">Deep Learning GAN</div>
+                <div class="method-meta">
+                  <span class="method-acc">98.89% accuracy</span>
+                  <span class="method-hw hw-gpu">GPU</span>
+                </div>
+              </div>
+              <div class="method-check">✓</div>
+            </button>
+            <button class="method-btn" data-method="nerf" id="methodNerf">
+              <div class="method-icon">✦</div>
+              <div class="method-info">
+                <div class="method-name">Neural Radiance Field</div>
+                <div class="method-meta">
+                  <span class="method-acc">&lt;4mm error</span>
+                  <span class="method-hw hw-rt">REAL-TIME</span>
+                </div>
+              </div>
+              <div class="method-check">✓</div>
+            </button>
+            <button class="method-btn" data-method="ssim" id="methodSsim">
+              <div class="method-icon">⬡</div>
+              <div class="method-info">
+                <div class="method-name">Statistical Shape Model</div>
+                <div class="method-meta">
+                  <span class="method-acc">Template-based</span>
+                  <span class="method-hw hw-cpu">CPU</span>
+                </div>
+              </div>
+              <div class="method-check">✓</div>
+            </button>
+            <button class="method-btn" data-method="kriging" id="methodKriging">
+              <div class="method-icon">◈</div>
+              <div class="method-info">
+                <div class="method-name">Kriging Interpolation</div>
+                <div class="method-meta">
+                  <span class="method-acc">70% faster</span>
+                  <span class="method-hw hw-par">PARALLEL</span>
+                </div>
+              </div>
+              <div class="method-check">✓</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Advanced Settings -->
+        <div class="advanced-toggle" id="advancedToggle">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M6 2v8M2 6l4 4 4-4" class="adv-arrow"/>
+          </svg>
+          <span>ADVANCED SETTINGS</span>
+        </div>
+        <div class="advanced-panel hidden" id="advancedPanel">
+          <div class="adv-row">
+            <label class="adv-label">DEPTH LAYERS</label>
+            <div class="slider-wrap">
+              <input type="range" id="depthLayers" min="10" max="50" value="20" class="range-slider">
+              <span class="range-val" id="depthVal">20</span>
+            </div>
+          </div>
+          <div class="adv-row">
+            <label class="adv-label">POINT DENSITY</label>
+            <div class="slider-wrap">
+              <input type="range" id="pointDensity" min="1" max="8" value="4" class="range-slider">
+              <span class="range-val" id="densityVal">4</span>
+            </div>
+          </div>
+          <div class="adv-row">
+            <label class="adv-label">NOISE THRESHOLD</label>
+            <div class="slider-wrap">
+              <input type="range" id="noiseThreshold" min="0" max="30" value="6" class="range-slider">
+              <span class="range-val" id="noiseVal">6%</span>
+            </div>
+          </div>
+          <div class="toggle-row">
+            <label class="adv-label">EDGE PRESERVATION</label>
+            <div class="toggle-switch active" id="edgeToggle"></div>
+          </div>
+          <div class="toggle-row">
+            <label class="adv-label">AI ANALYSIS</label>
+            <div class="toggle-switch active" id="aiToggle"></div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-wrap hidden" id="progressWrap">
+          <div class="progress-header">
+            <span class="prog-label loading-dots">PROCESSING</span>
+            <span class="prog-pct" id="progPct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progFill"></div>
+          </div>
+          <div class="prog-steps" id="progSteps">
+            <div class="prog-step" id="step1" data-label="Preprocessing image"></div>
+            <div class="prog-step" id="step2" data-label="Feature extraction"></div>
+            <div class="prog-step" id="step3" data-label="Volume reconstruction"></div>
+            <div class="prog-step" id="step4" data-label="Depth layer generation"></div>
+            <div class="prog-step" id="step5" data-label="AI analysis pipeline"></div>
+            <div class="prog-step" id="step6" data-label="Surgical planning report"></div>
+          </div>
+        </div>
+
+        <!-- Convert Button -->
+        <div class="convert-area">
+          <button class="convert-btn" id="convertBtn" disabled>
+            <div class="btn-glow"></div>
+            <div class="btn-spinner hidden" id="btnSpinner"></div>
+            <svg class="btn-icon" id="btnIcon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2L4 6h3v4H5l3 4 3-4h-2V6h3L8 2z" fill="currentColor"/>
+              <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/>
+            </svg>
+            <span id="btnText">Convert to 3D</span>
+          </button>
+          <div class="convert-hint" id="convertHint">Upload an image to begin</div>
+        </div>
+      </aside>
+
+      <!-- ═══ CENTER PANEL ═══ -->
+      <main class="panel panel-center" id="centerPanel">
+        <div class="viewport-header">
+          <div class="vh-left">
+            <div class="viewport-label">3D VOLUMETRIC RECONSTRUCTION</div>
+            <div class="viewport-sub" id="viewportSub">Awaiting input</div>
+          </div>
+          <div class="view-controls">
+            <button class="vcbtn active" id="viewPoints" data-view="points" aria-label="Point cloud view">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                <circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="7" r="1.5"/><circle cx="11" cy="3" r="1.5"/>
+                <circle cx="3" cy="11" r="1.5"/><circle cx="11" cy="11" r="1.5"/>
+              </svg>
+              POINTS
+            </button>
+            <button class="vcbtn" id="viewWire" data-view="wire" aria-label="Wireframe view">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1">
+                <rect x="2" y="2" width="10" height="10" rx="1"/>
+                <line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/>
+              </svg>
+              WIRE
+            </button>
+            <button class="vcbtn" id="viewSolid" data-view="solid" aria-label="Solid mesh view">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                <path d="M7 1L1 4.5v5L7 13l6-3.5v-5L7 1z" opacity="0.8"/>
+              </svg>
+              SOLID
+            </button>
+            <div class="vcbtn-divider"></div>
+            <button class="vcbtn" id="viewReset" aria-label="Reset camera">↺ RESET</button>
+            <button class="vcbtn" id="viewAutoRotate" aria-label="Toggle auto rotation">⟳ AUTO</button>
+          </div>
+        </div>
+
+        <div class="viewport-body">
+          <canvas id="threeCanvas"></canvas>
+
+          <!-- Idle State -->
+          <div class="idle-state" id="idleState">
+            <div class="idle-rings">
+              <div class="idle-ring r1"></div>
+              <div class="idle-ring r2"></div>
+              <div class="idle-ring r3"></div>
+              <div class="idle-icon">🔬</div>
+            </div>
+            <div class="idle-label">Upload a 2D medical image to begin reconstruction</div>
+            <div class="idle-sub">Supports X-ray · MRI · CT · Ultrasound · DICOM</div>
+          </div>
+
+          <!-- Processing Overlay -->
+          <div class="processing-overlay hidden" id="processingOverlay">
+            <div class="proc-ring"></div>
+            <div class="proc-text">Building 3D volume<span class="proc-dots"></span></div>
+          </div>
+
+          <!-- Viewport Overlay UI -->
+          <div class="viewport-overlay">
+            <div class="axis-hud">
+              <span class="ax ax-x">X</span>
+              <span class="ax ax-y">Y</span>
+              <span class="ax ax-z">Z</span>
+            </div>
+            <div class="recon-hud hidden" id="reconHud">
+              <div class="hud-item">
+                <div class="hud-label">VOXELS</div>
+                <div class="hud-val" id="hudVoxels">—</div>
+              </div>
+              <div class="hud-item">
+                <div class="hud-label">RESOLUTION</div>
+                <div class="hud-val" id="hudRes">—</div>
+              </div>
+              <div class="hud-item">
+                <div class="hud-label">METHOD</div>
+                <div class="hud-val" id="hudMethod">GAN</div>
+              </div>
+              <div class="hud-item">
+                <div class="hud-label">ACCURACY</div>
+                <div class="hud-val accent-cyan" id="hudAccuracy">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slice View Strip -->
+        <div class="slice-strip hidden" id="sliceStrip">
+          <div class="ss-label">CROSS-SECTION SLICES</div>
+          <div class="ss-canvases" id="sliceCanvases">
+            <div class="ss-item">
+              <canvas class="slice-canvas" id="sliceAxial" width="80" height="80"></canvas>
+              <span>AXIAL</span>
+            </div>
+            <div class="ss-item">
+              <canvas class="slice-canvas" id="sliceCoronal" width="80" height="80"></canvas>
+              <span>CORONAL</span>
+            </div>
+            <div class="ss-item">
+              <canvas class="slice-canvas" id="sliceSagittal" width="80" height="80"></canvas>
+              <span>SAGITTAL</span>
+            </div>
+          </div>
+          <div class="ss-depth-wrap">
+            <span class="ss-label">DEPTH SLICE</span>
+            <input type="range" id="depthSlider" min="0" max="100" value="50" class="range-slider">
+          </div>
+        </div>
+      </main>
+
+      <!-- ═══ RIGHT PANEL ═══ -->
+      <aside class="panel panel-right" id="rightPanel">
+        <div class="panel-header">
+          <div class="ph-icon">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="4" stroke="#00e5ff" stroke-width="1"/>
+              <path d="M6 4v2l1.5 1.5" stroke="#00e5ff" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span>AI SURGICAL ANALYSIS</span>
+          <div class="ph-dot"></div>
+        </div>
+
+        <div class="analysis-container" id="analysisContainer">
+          <!-- Empty state -->
+          <div class="empty-state" id="emptyState">
+            <div class="es-visual">
+              <div class="es-circle c1"></div>
+              <div class="es-circle c2"></div>
+              <div class="es-circle c3"></div>
+              <span class="es-icon">🩻</span>
+            </div>
+            <div class="es-title">Awaiting Reconstruction</div>
+            <p class="es-text">AI-powered surgical insights, clinical observations, and planning recommendations will appear here after 3D reconstruction is complete.</p>
+            <div class="es-features">
+              <div class="es-feature"><span>⬡</span> Anatomy Detection</div>
+              <div class="es-feature"><span>⬡</span> Clinical Observations</div>
+              <div class="es-feature"><span>⬡</span> Surgical Planning</div>
+              <div class="es-feature"><span>⬡</span> Risk Assessment</div>
+            </div>
+          </div>
+
+          <!-- Analysis cards (injected by JS) -->
+          <div id="analysisCards" class="analysis-cards hidden"></div>
+        </div>
+
+        <!-- Export Panel -->
+        <div class="export-panel hidden" id="exportPanel">
+          <div class="export-title">EXPORT RECONSTRUCTION</div>
+          <div class="export-buttons">
+            <button class="export-btn" id="exportSTL">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2">
+                <path d="M7 2v8M4 7l3 3 3-3M2 11h10"/>
+              </svg>
+              Export STL
+            </button>
+            <button class="export-btn" id="exportReport">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2">
+                <rect x="2" y="1" width="10" height="12" rx="1"/><path d="M4 5h6M4 7h6M4 9h4"/>
+              </svg>
+              Export Report
+            </button>
+            <button class="export-btn" id="exportSnapshot">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2">
+                <rect x="1" y="3" width="12" height="9" rx="1"/><circle cx="7" cy="7.5" r="2.5"/>
+              </svg>
+              Snapshot
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <div class="sb-item">
+            <div class="sb-dot green"></div>
+            <span>READY</span>
+          </div>
+          <div class="sb-item">
+            <div class="sb-dot amber"></div>
+            <span id="sbMethod">GAN · GPU</span>
+          </div>
+          <div class="sb-item ml-auto">
+            <span id="sbTime">—</span>
+          </div>
+        </div>
+      </aside>
+
+    </div><!-- end workspace-grid -->
+  </div><!-- end tab-workspace -->
+
+  <!-- RESEARCH TAB -->
+  <div class="tab-content" id="tab-research">
+    <div class="research-layout">
+      <div class="research-header">
+        <div class="rh-label">CLINICAL EVIDENCE BASE</div>
+        <h1 class="rh-title">2D→3D Surgical Imaging: Research Overview</h1>
+        <p class="rh-desc">Peer-reviewed evidence supporting AI-powered volumetric reconstruction for surgical applications.</p>
+      </div>
+      <div class="research-grid">
+        <div class="research-card" data-method="GAN Deep Learning">
+          <div class="rc-badge">Deep Learning</div>
+          <h3>GAN-Based Reconstruction</h3>
+          <p>Generative Adversarial Networks achieve <strong>98.89% accuracy</strong> in 2D-to-3D volumetric reconstruction. Pix2Pix paired translation enables precise intraoperative model generation.</p>
+          <div class="rc-stat"><span>98.89%</span> Validation Accuracy</div>
+          <div class="rc-ref">Ghoshal et al. (2023) · arXiv:2303.09523</div>
+        </div>
+        <div class="research-card" data-method="NeRF">
+          <div class="rc-badge nerf">Neural Radiance Fields</div>
+          <h3>Intraoperative NeRF Guidance</h3>
+          <p>NeRF-based reconstruction from laparoscopic video + ultrasound achieves <strong>&lt;4mm navigation error</strong>, meeting clinical safety requirements for liver surgery.</p>
+          <div class="rc-stat small"><span>&lt;4mm</span> Navigation Error</div>
+          <div class="rc-ref">Boretto et al. (2024) · IET Research / Nature</div>
+        </div>
+        <div class="research-card" data-method="SSIM">
+          <div class="rc-badge ssim">Statistical Shape</div>
+          <h3>SSIM Template Deformation</h3>
+          <p>Articulated Statistical Shape and Intensity Models (ASSIMs) learn density from CT databases and fit to X-ray projections for fast, portable reconstruction.</p>
+          <div class="rc-stat small"><span>~30s</span> Processing Time</div>
+          <div class="rc-ref">XrayTo3D · IIT Bombay (2015)</div>
+        </div>
+        <div class="research-card" data-method="Kriging">
+          <div class="rc-badge kriging">Interpolation</div>
+          <h3>Kriging Parallel Processing</h3>
+          <p>Edge-preserved Kriging interpolation with multi-core parallelism reduces 3D reconstruction time by <strong>70%</strong> while maintaining &gt;98% shape accuracy.</p>
+          <div class="rc-stat small"><span>70%</span> Faster Processing</div>
+          <div class="rc-ref">Zhang et al. (2025) · J. Med. Imaging</div>
+        </div>
+        <div class="research-card full" data-method="Clinical">
+          <div class="rc-badge clinical">Clinical Applications</div>
+          <h3>Surgical Specialties Validated</h3>
+          <div class="spec-grid">
+            <div class="spec-item">
+              <div class="spec-icon">🦴</div>
+              <div class="spec-name">Orthopedics</div>
+              <div class="spec-desc">Fracture reduction, implant planning</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-icon">🧠</div>
+              <div class="spec-name">Neurosurgery</div>
+              <div class="spec-desc">Stereotactic navigation, tumor localization</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-icon">🫀</div>
+              <div class="spec-name">Cardiovascular</div>
+              <div class="spec-desc">Valve repair, aneurysm planning</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-icon">🩺</div>
+              <div class="spec-name">Laparoscopic</div>
+              <div class="spec-desc">Liver resection, real-time guidance</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- METHODS TAB -->
+  <div class="tab-content" id="tab-methods">
+    <div class="methods-layout">
+      <div class="methods-header">
+        <div class="rh-label">TECHNICAL OVERVIEW</div>
+        <h1 class="rh-title">Reconstruction Method Comparison</h1>
+      </div>
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Accuracy</th>
+              <th>Speed</th>
+              <th>Hardware</th>
+              <th>Best For</th>
+              <th>Radiation ↓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row-highlight">
+              <td><strong>GAN Deep Learning</strong></td>
+              <td><span class="tag-green">98.89%</span></td>
+              <td>10–30s</td>
+              <td>GPU</td>
+              <td>X-ray, MRI slices</td>
+              <td>✓ High</td>
+            </tr>
+            <tr>
+              <td><strong>Neural Radiance Field</strong></td>
+              <td><span class="tag-green">&lt;4mm err</span></td>
+              <td>Real-time</td>
+              <td>GPU Cluster</td>
+              <td>Intraoperative liver</td>
+              <td>✓ High</td>
+            </tr>
+            <tr>
+              <td><strong>Statistical Shape Model</strong></td>
+              <td><span class="tag-amber">~95%</span></td>
+              <td>~30s</td>
+              <td>CPU</td>
+              <td>Orthopedic bones</td>
+              <td>✓ High</td>
+            </tr>
+            <tr>
+              <td><strong>Kriging Interpolation</strong></td>
+              <td><span class="tag-green">&gt;98%</span></td>
+              <td>70% faster</td>
+              <td>Multi-core</td>
+              <td>MRI slice sequences</td>
+              <td>✓ High</td>
+            </tr>
+            <tr class="row-dim">
+              <td><em>CT Scan (baseline)</em></td>
+              <td><em>Ground truth</em></td>
+              <td><em>Variable</em></td>
+              <td><em>CT hardware</em></td>
+              <td><em>All types</em></td>
+              <td>✗ High dose</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pipeline-diagram">
+        <div class="pd-label">RECONSTRUCTION PIPELINE</div>
+        <div class="pd-steps">
+          <div class="pd-step">
+            <div class="pd-num">01</div>
+            <div class="pd-icon">🖼️</div>
+            <div class="pd-name">2D Input</div>
+            <div class="pd-desc">X-ray / MRI / Ultrasound</div>
+          </div>
+          <div class="pd-arrow">→</div>
+          <div class="pd-step">
+            <div class="pd-num">02</div>
+            <div class="pd-icon">🔬</div>
+            <div class="pd-name">Preprocessing</div>
+            <div class="pd-desc">Edge detection, normalization</div>
+          </div>
+          <div class="pd-arrow">→</div>
+          <div class="pd-step">
+            <div class="pd-num">03</div>
+            <div class="pd-icon">🧠</div>
+            <div class="pd-name">AI Model</div>
+            <div class="pd-desc">GAN / NeRF / SSIM / Kriging</div>
+          </div>
+          <div class="pd-arrow">→</div>
+          <div class="pd-step">
+            <div class="pd-num">04</div>
+            <div class="pd-icon">📦</div>
+            <div class="pd-name">3D Volume</div>
+            <div class="pd-desc">Voxel mesh generation</div>
+          </div>
+          <div class="pd-arrow">→</div>
+          <div class="pd-step">
+            <div class="pd-num">05</div>
+            <div class="pd-icon">🏥</div>
+            <div class="pd-name">Surgical Plan</div>
+            <div class="pd-desc">AI analysis + export</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
